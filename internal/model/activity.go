@@ -2,6 +2,8 @@ package model
 
 import "time"
 
+// Activity 是一组关联事件的集合，代表同一行为者的连续行为序列。
+// 由 Correlator 通过 CorrelationKey 将相关 Event 归类生成。
 type Activity struct {
 	ID string `json:"id"`
 

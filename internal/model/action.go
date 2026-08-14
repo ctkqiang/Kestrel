@@ -1,5 +1,6 @@
 package model
 
+// ActionType 标识事件中容器执行的动作类型。
 type ActionType string
 
 const (
@@ -12,6 +13,7 @@ const (
 
 func (t ActionType) String() string { return string(t) }
 
+// Action 描述事件中执行的具体动作及其参数。
 type Action struct {
 	Type        ActionType `json:"type"`
 	Command     string     `json:"command"`
