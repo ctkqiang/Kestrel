@@ -54,7 +54,11 @@ RAW TELEMETRY → [SIDECAR] → NORMALIZED EVENT → SIGNAL → ACTIVITY → CON
 Kestrel/
 ├── main.go                          # 管道处理器入口 (stdin JSONL → stdout JSONL)
 ├── go.mod
+├── Makefile                         # 构建/测试/演示一站式工具
+├── .gitignore
 ├── internal/
+│   ├── config/                      # 配置管理
+│   │   └── config.go                #   flag + 环境变量合并，校验与版本注入
 │   ├── model/                       # 数据模型层
 │   │   ├── action.go                #   动作类型 (container_exec, shell_spawn, ...)
 │   │   ├── actor.go                 #   执行者 (身份类型: user/SA/node/anonymous)
@@ -69,13 +73,157 @@ Kestrel/
 │   │   ├── signal.go               #   信号 (异常类型 + 权重 + 证据)
 │   │   ├── source.go               #   事件来源
 │   │   └── target.go               #   目标 (集群/命名空间/Pod/容器)
-│   └── service/                     # 遥测归一化层
-│       ├── sidecar.go               #   入口: Sidecar.Process(raw, source)
-│       ├── k8s_audit.go             #   K8s 审计日志归一化器
-│       └── docker_event.go          #   Docker daemon 事件归一化器
+│   ├── service/                     # 遥测归一化层
+│   │   ├── sidecar.go               #   入口: Sidecar.Process(raw, source)
+│   │   ├── k8s_audit.go             #   K8s 审计日志归一化器
+│   │   └── docker_event.go          #   Docker daemon 事件归一化器
+│   └── utilities/                   # 工具库
+│       └── logger.go                #   结构化日志器 (4 级别 + verbose + 字段)
+├── k8s/                             # Kubernetes 部署配置
+│   ├── namespace.yaml               #   命名空间 (prod + dev)
+│   ├── configmap.yaml               #   配置映射 (集群 ID、日志级别)
+│   ├── rbac.yaml                    #   ServiceAccount + ClusterRole/Role
+│   ├── deployment.yaml              #   Deployment (prod: 3 副本 / dev: 1 副本)
+│   ├── service.yaml                 #   Service (prod: ClusterIP / dev: NodePort)
+│   ├── ingress.yaml                 #   Ingress + NetworkPolicy
+│   ├── test-target.yaml             #   测试目标 Pod (Gin 应用)
+│   └── kustomization.yaml           #   Kustomize 入口
 └── test/
-    └── sidecar_test.go             # 归一化器测试 (12 个用例)
+    ├── sidecar_test.go             # 归一化器单元测试 (12 个用例)
+    └── attack_test.go              # 安全测试套件 (集成构建标签)
 ```
+
+## 快速开始
+
+### 构建
+
+```bash
+make build    # 编译到 bin/kestrel
+```
+
+### 演示
+
+```bash
+make demo      # 内置演示数据，verbose 模式
+```
+
+### 测试
+
+```bash
+make test      # 运行全部测试
+make vet       # 静态分析
+make lint      # golangci-lint (需安装)
+```
+
+## 配置
+
+### 命令行参数
+
+| 参数 | 说明 | 默认值 |
+|---|---|---|
+| `-cluster-id` | 集群标识符 | 环境变量 `KESTREL_CLUSTER_ID` |
+| `-v` | verbose 模式，输出 DEBUG 级别日志 | `false` |
+| `-log-format` | 日志格式（text / json） | `text` |
+
+### 环境变量
+
+| 变量 | 说明 |
+|---|---|
+| `KESTREL_CLUSTER_ID` | 集群标识符，注入到所有归一化事件中 |
+
+## 使用方式
+
+### 从文件处理
+
+```bash
+cat audit.log | ./bin/kestrel -cluster-id prod-eu-west > events.jsonl
+```
+
+### 实时流处理
+
+```bash
+kubectl audit-stream | ./bin/kestrel -cluster-id prod-eu-west | detector
+```
+
+### Docker 事件流
+
+```bash
+docker events --format '{{json .}}' | ./bin/kestrel -cluster-id docker-host-01
+```
+
+### Verbose 模式
+
+```bash
+echo '{"auditID":"..."}' | ./bin/kestrel -cluster-id dev-cluster -v
+```
+
+### 信号
+
+支持 `SIGINT`（Ctrl+C）和 `SIGTERM`优雅关停，收到信号后停止读取新输入，输出统计后退出。
+
+## Kubernetes 部署
+
+### 生产环境
+
+```bash
+# 应用全部配置（Kustomize）
+kubectl apply -k k8s/
+
+# 或单独应用
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/rbac.yaml
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/ingress.yaml
+```
+
+生产环境配置特点：
+- 3 副本 RollingUpdate（maxSurge=1, maxUnavailable=0）
+- ClusterIP Service + TLS Ingress（速率限制 + 安全头注入）
+- NetworkPolicy（仅允许 ingress-nginx 和 kube-system 入站）
+- ClusterRole 绑定（全局审计读取权限）
+- 资源限制: CPU 100m-500m / Memory 64Mi-256Mi
+
+### 开发环境
+
+```bash
+# 开发环境使用 dev 命名空间
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/rbac.yaml
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+
+# NodePort 暴露到 30080
+minikube service kestrel-sidecar -n kestrel-dev
+```
+
+开发环境配置特点：
+- 1 副本 Recreate 策略
+- NodePort Service（端口 30080）
+- Role 限定在 dev 命名空间
+- verbose 模式开启
+
+### 测试目标部署
+
+```bash
+# 部署 Gin 测试应用 Pod
+kubectl apply -f k8s/test-target.yaml
+```
+
+### 安全配置
+
+所有环境共享的安全基线：
+
+| 配置项 | 值 | 说明 |
+|---|---|---|
+| `runAsNonRoot` | `true` | 禁止 root 运行 |
+| `runAsUser` | `1000` | 非特权用户 |
+| `readOnlyRootFilesystem` | `true` | 只读文件系统 |
+| `allowPrivilegeEscalation` | `false` | 禁止提权 |
+| `capabilities.drop` | `ALL` | 丢弃所有 Linux capabilities |
+| `seccompProfile` | `RuntimeDefault` | 默认 seccomp 配置 |
 
 ## 支持的遥测来源
 
@@ -133,27 +281,7 @@ K8s audit 的 `requestURI` 带有查询参数：
 
 403/401 响应仍然被归一化，标记 `metadata["denied"]=true`。被拒绝的执行尝试本身是有价值的检测信号。
 
-## 使用方式
-
-### 从文件处理
-
-```bash
-cat audit.log | KESTREL_CLUSTER_ID=prod-eu-west ./kestrel > events.jsonl
-```
-
-### 实时流处理
-
-```bash
-kubectl audit-stream | KESTREL_CLUSTER_ID=prod-eu-west ./kestrel | detector
-```
-
-### Docker 事件流
-
-```bash
-docker events --format '{{json .}}' | KESTREL_CLUSTER_ID=docker-host-01 ./kestrel
-```
-
-### 输出示例
+## 输出示例
 
 ```json
 {
@@ -200,11 +328,108 @@ docker events --format '{{json .}}' | KESTREL_CLUSTER_ID=docker-host-01 ./kestre
 
 ## 测试
 
+### 单元测试
+
 ```bash
+make test
+# 或
 go test ./test/ -v
 ```
 
 覆盖 12 个用例：匿名 exec（真阳性）、SRE 调试（假阳性）、服务账号身份、被拒绝的 exec、批量摄入、Docker exec_create、Docker attach、未知来源错误、畸形 JSON、空载荷、节点身份、多命令提取。
+
+### 集成安全测试
+
+集成测试使用 `//go:build integration` 构建标签，需要运行中的 Minikube 集群。
+
+```bash
+# 完整安全测试套件（需要 Minikube 运行中）
+go test -tags integration ./test/ -v
+
+# 仅运行安全评估
+go test -tags integration ./test/ -run TestAttackSuite/Security_Assessment -v
+
+# 仅运行边缘场景测试
+go test -tags integration ./test/ -run "TestLargePayload|TestConcurrentRequests|TestMalformedJSON" -v
+
+# 跳过长时间运行的测试
+go test -tags integration ./test/ -short -v
+
+# 带详细日志
+go test -tags integration ./test/ -v -verbose
+
+# 指定应用地址（跳过 Minikube 自动发现）
+TEST_APP_URL=http://localhost:8080 go test -tags integration ./test/ -run TestSecurity -v
+```
+
+#### 测试框架结构
+
+**4 个执行阶段：**
+
+| 阶段 | 函数 | 职责 |
+|---|---|---|
+| Setup | `Setup_Kubernetes_Deployment` | 创建 Namespace → 部署 Deployment + Service + Ingress → 等待滚动更新 |
+| Health Check | `Health_Check` | 轮询 `/health` → 验证所有端点响应 |
+| Security Assessment | `Security_Assessment` | 12 类攻击模拟 → 生成报告 |
+| Teardown | `Teardown` | 删除 Namespace（级联清理所有资源） |
+
+**安全测试覆盖：**
+
+| 测试类别 | 载荷数 | 严重度 | 检测内容 |
+|---|---|---|---|
+| 路径穿越 | 5 | 高 | `../` 序列、URL 编码绕过 |
+| 命令注入 | 8 | 高 | Shell 元字符、子命令注入 |
+| SSRF | 8 | 高 | 云元数据端点、内网扫描 |
+| SQL 注入 | 6 | 高 | 布尔注入、UNION、堆叠查询 |
+| 认证绕过 | 10 | 高 | 请求头伪造、路径绕过 |
+| 跨站脚本 | 6 | 中 | 反射型 XSS、事件处理器注入 |
+| 开放重定向 | 5 | 中 | 外部域名跳转、协议注入 |
+| 目录列表 | 8 | 中 | 敏感文件暴露、`.git`/`.env` |
+| 安全响应头 | 6 | 中 | HSTS、CSP、X-Frame-Options |
+| HTTP 方法篡改 | 9 | 低 | TRACE/PROPFIND/CONNECT |
+| HTTP 参数污染 | 4 | 低 | 重复参数绕过 |
+| Host 头注入 | 4 | 低 | 恶意 Host 反射 |
+
+**边缘场景测试：**
+
+| 测试 | 验证内容 |
+|---|---|
+| `TestLargePayload` | 1MB 请求体不导致服务端崩溃 |
+| `TestSlowLoris` | 慢速连接被正确拒绝或超时 |
+| `TestConcurrentRequests` | 50 并发 200 请求无失败 |
+| `TestEmptyBody` | 空请求体不导致 5xx 错误 |
+| `TestMalformedJSON` | 8 种畸形 JSON 不导致 5xx 错误 |
+| `TestHTTPTimeout` | 超时请求正确处理 |
+| `TestUnicodeInput` | Unicode/Emoji/控制字符不导致崩溃 |
+
+**错误处理测试：**
+
+| 测试 | 验证内容 |
+|---|---|
+| `TestKubeClientConnectionError` | 无效 kubeconfig 路径正确报错 |
+| `TestNamespaceDeletionTimeout` | 命名空间删除超时处理 |
+| `TestInvalidDeploySpec` | 无效 Deployment 规格被 K8s API 拒绝 |
+
+**集成点测试：**
+
+| 测试 | 验证内容 |
+|---|---|
+| `TestServiceDNSResolution` | Service ClusterIP + selector 正确配置 |
+| `TestPodRestartRecovery` | Pod 删除后自动恢复 |
+| `TestRollingUpdate` | 滚动更新期间服务不中断 |
+| `TestConfigMapPropagation` | ConfigMap 创建/更新/读取 |
+| `TestServiceAccountToken` | SA Token 投影卷挂载 |
+| `TestSecretMount` | Secret 创建与存储 |
+
+**K8s 安全基线测试：**
+
+| 测试 | 验证内容 |
+|---|---|
+| `TestDeploymentSecurityContext` | RunAsNonRoot、ReadOnlyRootFilesystem、NoPrivilegeEscalation |
+| `TestPodSecurityContext` | Pod 级 SeccompProfile |
+| `TestNetworkIsolation` | NetworkPolicy 存在性检查 |
+| `TestResourceLimits` | CPU/Memory Limits + Requests |
+| `TestNoSecretsInEnv` | 环境变量无硬编码密钥 |
 
 ## 设计原则
 
@@ -213,6 +438,7 @@ go test ./test/ -v
 3. **Docker 缺身份 → 保守匿名** — 让检测器以更高警觉评估
 4. **零外部依赖** — 仅用 Go 标准库
 5. **管道模式** — stdin/stdout JSONL，适合 Kubernetes sidecar 部署
+6. **优雅关停** — SIGINT/SIGTERM 信号响应，不丢正在处理的事件
 
 ## MITRE ATT&CK 映射
 
