@@ -1,0 +1,21 @@
+# 二进制构建产物
+kestrel
+bin/
+
+# IDE 与编辑器
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# Trae 内部文档
+.trae/
+
+# 覆盖率文件
+*.out
+coverage.txt
