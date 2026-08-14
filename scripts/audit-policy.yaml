@@ -1,0 +1,31 @@
+# audit-policy.yaml
+# Kubernetes 审计策略 —— Kestrel e2e 真实场景测试
+#
+# 聚焦 T1059.013 相关子资源：exec / attach / portforward
+# 记录 RequestResponse 级别，包含完整请求/响应体。
+
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+# 忽略系统健康检查，减少噪声。
+- level: None
+  users: ["system:apiserver", "system:kube-scheduler", "system:kube-controller-manager"]
+  verbs: ["get", "list", "watch"]
+
+# pods/exec / attach / portforward —— RequestResponse 级别记录。
+# 这是 Kestrel 检测的核心数据源。
+- level: RequestResponse
+  resources:
+  - group: ""
+    resources: ["pods/exec", "pods/attach", "pods/portforward"]
+  verbs: ["create"]
+
+# pods 的 create/delete/update —— Metadata 级别，用于追踪部署生命周期。
+- level: Metadata
+  resources:
+  - group: ""
+    resources: ["pods"]
+  verbs: ["create", "delete", "update", "patch"]
+
+# 其他所有请求 —— Metadata 级别兜底。
+- level: Metadata
