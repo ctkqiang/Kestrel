@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kestrel-config
+  namespace: kestrel
+  labels:
+    app.kubernetes.io/name: kestrel
+    app.kubernetes.io/component: config
+data:
+  KESTREL_CLUSTER_ID: "prod-cluster"
+  LOG_FORMAT: "json"
+  LOG_LEVEL: "info"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kestrel-config
+  namespace: kestrel-dev
+  labels:
+    app.kubernetes.io/name: kestrel
+    app.kubernetes.io/component: config
+    app.kubernetes.io/environment: development
+data:
+  KESTREL_CLUSTER_ID: "dev-cluster"
+  LOG_FORMAT: "text"
+  LOG_LEVEL: "debug"

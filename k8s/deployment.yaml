@@ -1,0 +1,182 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kestrel-sidecar
+  namespace: kestrel
+  labels:
+    app.kubernetes.io/name: kestrel
+    app.kubernetes.io/component: sidecar
+    app.kubernetes.io/environment: production
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kestrel
+      app.kubernetes.io/component: sidecar
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kestrel
+        app.kubernetes.io/component: sidecar
+        app.kubernetes.io/environment: production
+    spec:
+      serviceAccountName: kestrel-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: kestrel
+          image: kestrel/sidecar:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - "-cluster-id=prod-cluster"
+            - "-log-format=json"
+          env:
+            - name: KESTREL_CLUSTER_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: kestrel-config
+                  key: KESTREL_CLUSTER_ID
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: audit-logs
+              mountPath: /var/log/audit
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: audit-logs
+          hostPath:
+            path: /var/log/kubernetes/audit
+            type: DirectoryOrCreate
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule
+          operator: Exists
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kestrel-sidecar
+  namespace: kestrel-dev
+  labels:
+    app.kubernetes.io/name: kestrel
+    app.kubernetes.io/component: sidecar
+    app.kubernetes.io/environment: development
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kestrel
+      app.kubernetes.io/component: sidecar
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kestrel
+        app.kubernetes.io/component: sidecar
+        app.kubernetes.io/environment: development
+    spec:
+      serviceAccountName: kestrel-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: kestrel
+          image: kestrel/sidecar:dev
+          imagePullPolicy: Always
+          args:
+            - "-cluster-id=dev-cluster"
+            - "-v"
+            - "-log-format=text"
+          env:
+            - name: KESTREL_CLUSTER_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: kestrel-config
+                  key: KESTREL_CLUSTER_ID
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      nodeSelector:
+        kubernetes.io/os: linux

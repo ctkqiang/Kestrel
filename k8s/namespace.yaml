@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kestrel
+  labels:
+    app.kubernetes.io/name: kestrel
+    app.kubernetes.io/component: security-detection
+    app.kubernetes.io/managed-by: kustomize
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kestrel-dev
+  labels:
+    app.kubernetes.io/name: kestrel
+    app.kubernetes.io/component: security-detection
+    app.kubernetes.io/environment: development
+    app.kubernetes.io/managed-by: kustomize

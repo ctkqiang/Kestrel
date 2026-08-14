@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kestrel-sa
+  namespace: kestrel
+  labels:
+    app.kubernetes.io/name: kestrel
+    app.kubernetes.io/component: service-account
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kestrel-audit-reader
+  labels:
+    app.kubernetes.io/name: kestrel
+    app.kubernetes.io/component: rbac
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/exec", "pods/attach", "pods/portforward"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list", "watch"]
+  - apiGroups: ["audit.k8s.io"]
+    resources: ["events"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kestrel-audit-reader-binding
+  labels:
+    app.kubernetes.io/name: kestrel
+    app.kubernetes.io/component: rbac
+subjects:
+  - kind: ServiceAccount
+    name: kestrel-sa
+    namespace: kestrel
+roleRef:
+  kind: ClusterRole
+  name: kestrel-audit-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kestrel-sa
+  namespace: kestrel-dev
+  labels:
+    app.kubernetes.io/name: kestrel
+    app.kubernetes.io/component: service-account
+    app.kubernetes.io/environment: development
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kestrel-audit-reader
+  namespace: kestrel-dev
+  labels:
+    app.kubernetes.io/name: kestrel
+    app.kubernetes.io/component: rbac
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/exec", "pods/attach"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kestrel-audit-reader-binding
+  namespace: kestrel-dev
+  labels:
+    app.kubernetes.io/name: kestrel
+    app.kubernetes.io/component: rbac
+subjects:
+  - kind: ServiceAccount
+    name: kestrel-sa
+    namespace: kestrel-dev
+roleRef:
+  kind: Role
+  name: kestrel-audit-reader
+  apiGroup: rbac.authorization.k8s.io
