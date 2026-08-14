@@ -3,8 +3,8 @@ package utilities
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -117,7 +117,7 @@ func (l *Logger) log(level LogLevel, msg string, fields []Field) {
 		for _, f := range all {
 			pairs = append(pairs, fmt.Sprintf("%s=%s", f.Key, f.Value))
 		}
-		line += " | " + joinFields(pairs)
+		line += " | " + strings.Join(pairs, " ")
 	}
 
 	fmt.Fprintln(l.out, line)
@@ -141,7 +141,7 @@ func Fi(key string, value int) Field {
 
 // Fs 创建字符串切片临时字段。
 func Fs(key string, values []string) Field {
-	return Field{Key: key, Value: fmt.Sprintf("[%s]", joinFields(values))}
+	return Field{Key: key, Value: fmt.Sprintf("[%s]", strings.Join(values, " "))}
 }
 
 // Debug 输出 DEBUG 级别日志。
@@ -198,23 +198,11 @@ func (l *Logger) IsLevelEnabled(level LogLevel) bool {
 	return level >= l.level
 }
 
-// joinFields 用空格连接字段切片。
-func joinFields(parts []string) string {
-	result := ""
-	for i, p := range parts {
-		if i > 0 {
-			result += " "
-		}
-		result += p
-	}
-	return result
-}
-
 // FromGoLog 将标准 log.Logger 输出桥接到 Logger。
 // 适用于无法直接替换 log.Println 的第三方库。
-func FromGoLog(gl *log.Logger) *Logger {
+func FromGoLog(writer io.Writer) *Logger {
 	return &Logger{
-		out:     gl.Writer(),
+		out:     writer,
 		level:   LevelInfo,
 		verbose: false,
 		fields:  make(map[string]string),
