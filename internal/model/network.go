@@ -1,6 +1,6 @@
 package model
 
-// Network captures network-level metadata associated with an event.
+// Network 捕获与事件关联的网络层元数据。
 type Network struct {
 	Protocol        string `json:"protocol"`
 	SourceIP        string `json:"source_ip"`

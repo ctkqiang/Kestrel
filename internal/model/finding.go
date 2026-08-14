@@ -17,7 +17,7 @@ const (
 
 func (s Severity) String() string { return string(s) }
 
-// Numeric returns a comparable numeric value for severity ranking.
+// Numeric 返回用于严重度排序的可比较数值。
 func (s Severity) Numeric() int {
 	switch s {
 	case SeverityInfo:
@@ -55,7 +55,7 @@ type Finding struct {
 	Reason string `json:"reason"`
 }
 
-// Summary returns a human-readable one-line description of the finding.
+// Summary 返回检测结果的人类可读单行摘要。
 func (f Finding) Summary() string {
 	return fmt.Sprintf("[%s] confidence=%.0f%% | %s", f.Severity, f.Confidence*100, f.Reason)
 }

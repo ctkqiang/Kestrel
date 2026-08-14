@@ -1,6 +1,6 @@
 package model
 
-// Source describes the origin of an event.
+// Source 描述事件的来源信息。
 type Source struct {
 	IP       string `json:"ip"`
 	Port     int    `json:"port"`

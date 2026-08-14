@@ -11,7 +11,7 @@ type CorrelationKey struct {
 	SessionID string `json:"session_id"`
 }
 
-// Key returns a deterministic string suitable for use as a map key.
+// Key 返回一个确定性的字符串，适合用作 map key。
 func (k CorrelationKey) Key() string {
 	return fmt.Sprintf("%s|%s|%s|%s", k.ActorID, k.SourceIP, k.ClusterID, k.SessionID)
 }

@@ -1,6 +1,6 @@
 package model
 
-// Process captures process-level metadata associated with an event.
+// Process 捕获与事件关联的进程级元数据。
 type Process struct {
 	PID         int    `json:"pid"`
 	Name        string `json:"name"`
