@@ -79,7 +79,7 @@ func (s *Sidecar) Process(raw []byte, source TelemetrySource) ([]model.Event, er
 
 	default:
 		s.logger.Error("未知的遥测来源", utilities.F("source", string(source)))
-		return nil, fmt.Errorf("unknown telemetry source: %s", source)
+		return nil, fmt.Errorf("未知的遥测来源: %s", source)
 	}
 }
 

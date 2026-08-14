@@ -57,14 +57,14 @@ type k8sAuditEvent struct {
 func normalizeK8sAudit(raw []byte, clusterID string, logger *utilities.Logger) ([]model.Event, error) {
 	trimmed := bytes.TrimSpace(raw)
 	if len(trimmed) == 0 {
-		return nil, fmt.Errorf("empty K8s audit payload")
+		return nil, fmt.Errorf("K8s 审计载荷为空")
 	}
 
 	// 优先尝试数组格式（批量），否则回退到单个对象。
 	if trimmed[0] == '[' {
 		var events []k8sAuditEvent
 		if err := json.Unmarshal(raw, &events); err != nil {
-			return nil, fmt.Errorf("k8s audit array unmarshal: %w", err)
+			return nil, fmt.Errorf("K8s 审计数组反序列化失败: %w", err)
 		}
 		logger.Debug("批量 K8s 审计摄入", utilities.Fi("count", len(events)))
 		out := make([]model.Event, 0, len(events))
@@ -76,7 +76,7 @@ func normalizeK8sAudit(raw []byte, clusterID string, logger *utilities.Logger) (
 
 	var event k8sAuditEvent
 	if err := json.Unmarshal(raw, &event); err != nil {
-		return nil, fmt.Errorf("k8s audit unmarshal: %w", err)
+		return nil, fmt.Errorf("K8s 审计反序列化失败: %w", err)
 	}
 	return []model.Event{k8sAuditToEvent(event, clusterID, logger)}, nil
 }

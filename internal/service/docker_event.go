@@ -30,12 +30,12 @@ type dockerEvent struct {
 // （anonymous / unknown），以便检测器以适当的警觉度评估这些事件。
 func normalizeDocker(raw []byte, clusterID string, logger *utilities.Logger) ([]model.Event, error) {
 	if len(raw) == 0 {
-		return nil, fmt.Errorf("empty Docker event payload")
+		return nil, fmt.Errorf("Docker 事件载荷为空")
 	}
 
 	var de dockerEvent
 	if err := json.Unmarshal(raw, &de); err != nil {
-		return nil, fmt.Errorf("docker event unmarshal: %w", err)
+		return nil, fmt.Errorf("Docker 事件反序列化失败: %w", err)
 	}
 
 	logger.Debug("Docker 事件解析",
