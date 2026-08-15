@@ -7,7 +7,7 @@
 (function () {
   'use strict';
 
-  // ─── Documentation search index ──────────────────────────
+  // 文档搜索索引
   // 每项: { title, section, id, keywords }
   const SEARCH_INDEX = [
     { title: 'Kestrel 概述', section: '概述', id: 'overview', keywords: 'kestrel 概述 容器 安全 遥测 归一化' },
@@ -34,7 +34,7 @@
     { title: 'MITRE ATT&CK 映射', section: '设计', id: 'mitre', keywords: 'mitre attack t1059.013 container cli api det0083 an0233' }
   ];
 
-  // ─── 主题切换 ────────────────────────────────────────────
+  // 主题切换
   const THEME_KEY = 'kestrel-doc-theme';
   const root = document.documentElement;
 
@@ -71,7 +71,7 @@
     }
   }
 
-  // ─── 侧边栏导航 (active link) ────────────────────────────
+  // 侧边栏导航 (active link)
   function initSidebarActive() {
     const links = Array.from(document.querySelectorAll('.sidebar-link'));
     if (!links.length) return;
@@ -106,7 +106,7 @@
     sectionsById.forEach(function (item) { observer.observe(item.section); });
   }
 
-  // ─── 面包屑 ──────────────────────────────────────────────
+  // 面包屑导航
   function updateBreadcrumb(section) {
     const bc = document.querySelector('[data-breadcrumb]');
     if (!bc) return;
@@ -127,7 +127,7 @@
     });
   }
 
-  // ─── 目录 (Table of Contents) ────────────────────────────
+  // 目录 (Table of Contents)
   function initToc() {
     const toc = document.querySelector('[data-toc]');
     if (!toc) return;
@@ -166,7 +166,7 @@
     headings.forEach(function (h) { observer.observe(h); });
   }
 
-  // ─── 搜索 (Command palette) ──────────────────────────────
+  // 搜索 (Command palette)
   function initSearch() {
     const trigger = document.querySelector('.search-trigger');
     const modal = document.querySelector('.search-modal');
@@ -319,7 +319,7 @@
     if (footer) footer.textContent = SEARCH_INDEX.length;
   }
 
-  // ─── 代码块复制 ──────────────────────────────────────────
+  // 代码块复制
   function initCodeCopy() {
     document.querySelectorAll('.code-copy').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -355,7 +355,7 @@
     }, 1500);
   }
 
-  // ─── 移动端菜单 ──────────────────────────────────────────
+  // 移动端菜单
   function initMobileMenu() {
     const btn = document.querySelector('.mobile-menu-btn');
     const sidebar = document.querySelector('.sidebar');
