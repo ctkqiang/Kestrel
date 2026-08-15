@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Kestrel 容器安全遥测归一化引擎文档，针对 MITRE ATT&CK T1059.013 容器 CLI/API 检测场景">
+  <meta name="keywords" content="Kestrel,容器安全,遥测归一化,MITRE ATT&CK,T1059.013,Kubernetes,Docker,Go">
+  <meta name="author" content="Kestrel Project">
+  <meta name="theme-color" content="#00ADD8">
+  <title>Kestrel — 容器安全遥测归一化引擎</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2300ADD8'/><text x='16' y='22' font-family='monospace' font-weight='800' font-size='18' text-anchor='middle' fill='white'>K</text></svg>">
+</head>
+<body>
+  <a href="#main" class="skip-link">跳到主内容</a>
+
+  <!-- ═══ Header ═══ -->
+  <header class="site-header">
+    <div class="header-inner">
+      <button class="icon-button mobile-menu-btn" aria-label="打开菜单" aria-expanded="false" aria-controls="sidebar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+
+      <a href="#overview" class="brand" aria-label="Kestrel 首页">
+        <span class="brand-logo">K</span>
+        <span class="brand-name">Kestrel</span>
+        <span class="brand-tag">文档</span>
+      </a>
+
+      <div class="header-spacer"></div>
+
+      <button class="search-trigger" aria-label="搜索文档" role="combobox" aria-expanded="false" aria-controls="search-modal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <span class="search-text">搜索文档...</span>
+        <kbd>⌘K</kbd>
+      </button>
+
+      <button class="icon-button theme-toggle" aria-label="切换主题">
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+
+      <a href="https://github.com/ctkqiang/Kestrel" class="icon-button" aria-label="GitHub 仓库" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.56 9.56 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></svg>
+      </a>
+    </div>
+  </header>
+
+  <!-- ═══ Layout: Sidebar + Main + TOC ═══ -->
+  <div class="layout">
+    <div class="sidebar-backdrop" aria-hidden="true"></div>
+
+    <!-- ─── Sidebar ─── -->
+    <aside class="sidebar" id="sidebar" aria-label="文档导航">
+      <nav>
+        <div class="sidebar-section">
+          <h3 class="sidebar-section-title">入门</h3>
+          <ul class="sidebar-nav">
+            <li><a class="sidebar-link" href="#overview">概述</a></li>
+            <li><a class="sidebar-link" href="#architecture">架构设计</a></li>
+            <li><a class="sidebar-link" href="#pipeline">检测管线</a></li>
+            <li><a class="sidebar-link" href="#project-structure">项目结构</a></li>
+            <li><a class="sidebar-link" href="#quick-start">快速开始</a></li>
+          </ul>
+        </div>
+
+        <div class="sidebar-section">
+          <h3 class="sidebar-section-title">配置与使用</h3>
+          <ul class="sidebar-nav">
+            <li><a class="sidebar-link" href="#config">命令行配置</a></li>
+            <li><a class="sidebar-link" href="#usage">使用方式</a></li>
+            <li><a class="sidebar-link" href="#output-example">输出示例</a></li>
+          </ul>
+        </div>
+
+        <div class="sidebar-section">
+          <h3 class="sidebar-section-title">部署</h3>
+          <ul class="sidebar-nav">
+            <li><a class="sidebar-link" href="#k8s-deploy">Kubernetes 部署</a></li>
+            <li><a class="sidebar-link" href="#security-context">安全配置基线</a></li>
+          </ul>
+        </div>
+
+        <div class="sidebar-section">
+          <h3 class="sidebar-section-title">遥测与归一化</h3>
+          <ul class="sidebar-nav">
+            <li><a class="sidebar-link" href="#telemetry-k8s">K8s 审计日志</a></li>
+            <li><a class="sidebar-link" href="#telemetry-docker">Docker 事件</a></li>
+            <li><a class="sidebar-link" href="#identity">身份分类</a></li>
+            <li><a class="sidebar-link" href="#command-extract">命令提取</a></li>
+            <li><a class="sidebar-link" href="#denied-exec">被拒绝的 exec</a></li>
+          </ul>
+        </div>
+
+        <div class="sidebar-section">
+          <h3 class="sidebar-section-title">测试</h3>
+          <ul class="sidebar-nav">
+            <li><a class="sidebar-link" href="#simulate">一键全场景模拟</a></li>
+            <li><a class="sidebar-link" href="#unit-tests">单元测试</a></li>
+            <li><a class="sidebar-link" href="#exec-attack">exec 攻击测试方法论</a></li>
+            <li><a class="sidebar-link" href="#e2e">e2e 真实场景测试</a></li>
+            <li><a class="sidebar-link" href="#integration">集成安全测试</a></li>
+          </ul>
+        </div>
+
+        <div class="sidebar-section">
+          <h3 class="sidebar-section-title">设计</h3>
+          <ul class="sidebar-nav">
+            <li><a class="sidebar-link" href="#principles">设计原则</a></li>
+            <li><a class="sidebar-link" href="#mitre">MITRE ATT&CK 映射</a></li>
+          </ul>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- ─── Main content ─── -->
+    <main class="main" id="main">
+      <nav class="breadcrumb" data-breadcrumb aria-label="路径导航">
+        <span class="breadcrumb-item"><a href="#overview">首页</a></span>
+      </nav>
+
+      <!-- ═══ Hero ═══ -->
+      <section class="hero" id="overview" data-section="概述">
+        <span class="hero-eyebrow">
+          <span class="dot"></span>
+          容器安全遥测归一化引擎
+        </span>
+        <h1>Kestrel</h1>
+        <p class="hero-lead">
+          针对 MITRE ATT&CK <strong>T1059.013 — Container CLI/API</strong> 检测场景的轻量级管道处理器。
+          将 Kubernetes 审计日志与 Docker 事件归一化为统一的 <code>model.Event</code> JSONL 流，
+          适配 Kubernetes sidecar 部署。
+        </p>
+        <div class="hero-actions">
+          <a href="#quick-start" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M5 3l14 9-14 9V3z"/></svg>
+            快速开始
+          </a>
+          <a href="#architecture" class="btn btn-secondary">查看架构</a>
+          <a href="https://attack.mitre.org/detectionstrategies/DET0083/" class="btn btn-ghost" target="_blank" rel="noopener">
+            MITRE ATT&CK
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+          </a>
+        </div>
+        <div class="hero-stats">
+          <div class="stat">
+            <span class="stat-value">3.6MB</span>
+            <span class="stat-label">二进制体积</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value">0</span>
+            <span class="stat-label">外部依赖</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value">32</span>
+            <span class="stat-label">测试用例</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value">T1059.013</span>
+            <span class="stat-label">ATT&CK</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ 架构 ═══ -->
+      <section class="doc-section" id="architecture" data-section="架构">
+        <h2>架构设计</h2>
+        <p>Kestrel 采用管道模式工作：<strong>stdin 接收 JSONL → 归一化为 <code>model.Event</code> → stdout 输出 JSONL</strong>，适合作为 Kubernetes sidecar 部署在检测管线前端。</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-header-lang">text</span>
+            <button class="code-copy" aria-label="复制代码">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="8" height="8" rx="1"/><path d="M8 1H3a1 1 0 0 0-1 1v5"/></svg>
+            </button>
+          </div>
+<pre><code>原始遥测 (JSONL)          归一化事件 (JSONL)
+     │                         │
+     ▼                         ▼
+┌──────────┐    ┌───────────────────────┐    ┌──────────┐
+│  stdin   │───▶│  main.go (管道处理器)  │───▶│  stdout  │
+└──────────┘    └───────────────────────┘    └──────────┘
+                       │
+                       ▼
+              ┌──────────────────┐
+              │  service.Sidecar  │
+              │                   │
+              │  ┌─────────────┐  │
+              │  │ detectSource│  │  ← 推断 K8s audit / Docker
+              │  └──────┬──────┘  │
+              │         ▼         │
+              │  ┌─────┐ ┌──────┐│
+              │  │K8s  │ │Docker││  ← 各自的归一化器
+              │  │Audit│ │Event ││
+              │  └─────┘ └──────┘│
+              │         │         │
+              │         ▼         │
+              │   model.Event     │
+              └──────────────────┘</code></pre>
+        </div>
+
+        <div class="card-grid">
+          <div class="card card-hover">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+            </div>
+            <h3 class="card-title">管道模式</h3>
+            <p class="card-desc">stdin/stdout JSONL 流式处理，零缓冲，适配 Unix 管道组合与 K8s sidecar 部署。</p>
+          </div>
+          <div class="card card-hover">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M12 2L4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5l-8-3z"/></svg>
+            </div>
+            <h3 class="card-title">零外部依赖</h3>
+            <p class="card-desc">仅使用 Go 标准库，二进制 3.6MB，无第三方包，供应链安全。</p>
+          </div>
+          <div class="card card-hover">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>
+            </div>
+            <h3 class="card-title">多源归一化</h3>
+            <p class="card-desc">K8s audit 与 Docker event 自动推断归一化，统一为 <code>model.Event</code>。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="doc-section" id="pipeline" data-section="架构">
+        <h2>检测管线</h2>
+        <p>完整检测管线从原始遥测到 MITRE 映射共 8 个阶段，当前 Sidecar 归一化层已实现，后续 Detector、Correlator、Scorer 待实现。</p>
+
+        <div class="code-block">
+          <div class="code-header"><span class="code-header-lang">text</span></div>
+<pre><code>RAW TELEMETRY → [SIDECAR] → NORMALIZED EVENT → SIGNAL → ACTIVITY → CONTEXT EVAL → RISK → FINDING → MITRE MAPPING
+                 ✅ 已实现                                                                                   待实现</code></pre>
+        </div>
+
+        <table>
+          <thead><tr><th>层</th><th>状态</th><th>职责</th></tr></thead>
+          <tbody>
+            <tr><td><code>Sidecar</code> (<code>internal/service/</code>)</td><td><span class="badge badge-success">已实现</span></td><td>原始 JSON → <code>model.Event</code> 归一化</td></tr>
+            <tr><td><code>Detector</code> (<code>internal/engine/</code>)</td><td><span class="badge badge-warning">待实现</span></td><td>Event → Signal 信号提取</td></tr>
+            <tr><td><code>Correlator</code></td><td><span class="badge badge-warning">待实现</span></td><td>Signal → Activity 事件关联</td></tr>
+            <tr><td><code>Scorer</code></td><td><span class="badge badge-warning">待实现</span></td><td>Activity → Finding 风险评分</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="doc-section" id="project-structure" data-section="快速开始">
+        <h2>项目结构</h2>
+        <p>项目遵循 Go 标准布局：<code>internal/</code> 私有包，<code>cmd/main.go</code> 入口，<code>test/</code> 测试，<code>k8s/</code> 部署配置。</p>
+
+        <div class="code-block">
+          <div class="code-header"><span class="code-header-lang">text</span></div>
+<pre><code>Kestrel/
+├── main.go                          # 管道处理器入口 (stdin JSONL → stdout JSONL)
+├── go.mod / go.sum
+├── Makefile                         # 构建/测试/演示一站式工具
+├── .gitignore
+├── internal/
+│   ├── config/                      # 配置管理
+│   │   └── config.go                #   flag + 环境变量合并，校验与版本注入
+│   ├── model/                       # 数据模型层
+│   │   ├── action.go                #   动作类型 (container_exec, shell_spawn, ...)
+│   │   ├── actor.go                 #   执行者 (身份类型: user/SA/node/anonymous)
+│   │   ├── activity.go              #   活动 (关联事件的集合)
+│   │   ├── context.go              #   上下文 (授权状态、环境标识)
+│   │   ├── correlation_key.go       #   关联键 (ActorID + SourceIP + ClusterID + SessionID)
+│   │   ├── event.go                 #   事件 (归一化后的安全事件)
+│   │   ├── finding.go               #   检测结果 (严重度 + 置信度 + 证据)
+│   │   ├── k8.go                    #   Kubernetes 集群信息
+│   │   ├── network.go              #   网络元数据
+│   │   ├── process.go              #   进程元数据
+│   │   ├── signal.go               #   信号 (异常类型 + 权重 + 证据)
+│   │   ├── source.go               #   事件来源
+│   │   └── target.go               #   目标 (集群/命名空间/Pod/容器)
+│   ├── service/                     # 遥测归一化层
+│   │   ├── sidecar.go               #   入口: Sidecar.Process(raw, source)
+│   │   ├── k8s_audit.go             #   K8s 审计日志归一化器
+│   │   └── docker_event.go          #   Docker daemon 事件归一化器
+│   └── utilities/                   # 工具库
+│       └── logger.go                #   结构化日志器 (4 级别 + verbose + 字段)
+├── k8s/                             # Kubernetes 部署配置
+│   ├── namespace.yaml               #   命名空间 (prod + dev)
+│   ├── configmap.yaml               #   配置映射 (集群 ID、日志级别)
+│   ├── rbac.yaml                    #   ServiceAccount + ClusterRole/Role
+│   ├── deployment.yaml              #   Deployment (prod: 3 副本 / dev: 1 副本)
+│   ├── service.yaml                 #   Service (prod: ClusterIP / dev: NodePort)
+│   ├── ingress.yaml                 #   Ingress + NetworkPolicy
+│   ├── test-target.yaml             #   测试目标 Pod (Gin 应用)
+│   └── kustomization.yaml           #   Kustomize 入口
+├── scripts/                         # 自动化脚本
+│   ├── simulate.sh                  #   一键全场景模拟
+│   ├── e2e-setup.sh                 #   e2e 环境准备
+│   ├── e2e-real.sh                  #   e2e 真实测试
+│   └── audit-policy.yaml            #   K8s 审计策略
+└── test/
+    ├── sidecar_test.go             # 归一化器单元测试 (12 个用例)
+    ├── exec_attack_test.go          # exec 攻击测试方法论 (20 场景)
+    ├── e2e_real_test.go             # e2e 真实场景测试
+    └── attack_test.go              # 集成安全测试套件 (12 类攻击)</code></pre>
+        </div>
+      </section>
+
+      <section class="doc-section" id="quick-start" data-section="快速开始">
+        <h2>快速开始</h2>
+        <p>三步上手：构建、演示、测试。所有操作通过 Makefile 一键执行。</p>
+
+        <div class="card-grid">
+          <div class="card">
+            <h3 class="card-title">1. 构建</h3>
+            <div class="code-block">
+              <div class="code-header"><span class="code-header-lang">bash</span></div>
+<pre><code>make build    # 编译到 bin/kestrel</code></pre>
+            </div>
+          </div>
+          <div class="card">
+            <h3 class="card-title">2. 演示</h3>
+            <div class="code-block">
+              <div class="code-header"><span class="code-header-lang">bash</span></div>
+<pre><code>make demo      # 内置演示数据，verbose 模式</code></pre>
+            </div>
+          </div>
+          <div class="card">
+            <h3 class="card-title">3. 测试</h3>
+            <div class="code-block">
+              <div class="code-header"><span class="code-header-lang">bash</span></div>
+<pre><code>make test      # 运行全部测试
+make vet       # 静态分析
+make lint      # golangci-lint (需安装)</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout callout-info">
+          <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          <div class="callout-content">
+            <h4 class="callout-title">推荐：使用 make simulate</h4>
+            <p class="callout-body">一键执行 6 个阶段并生成技术化表格报告，详见<a href="#simulate">一键全场景模拟</a>章节。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="doc-section" id="config" data-section="配置">
+        <h2>命令行配置</h2>
+        <p>配置通过 <code>internal/config/config.go</code> 管理，合并命令行参数与环境变量，包含校验与版本注入。</p>
+
+        <h3>命令行参数</h3>
+        <table>
+          <thead><tr><th>参数</th><th>说明</th><th>默认值</th></tr></thead>
+          <tbody>
+            <tr><td><code>-cluster-id</code></td><td>集群标识符</td><td>环境变量 <code>KESTREL_CLUSTER_ID</code></td></tr>
+            <tr><td><code>-v</code></td><td>verbose 模式，输出 DEBUG 级别日志</td><td><code>false</code></td></tr>
+            <tr><td><code>-log-format</code></td><td>日志格式（text / json）</td><td><code>text</code></td></tr>
+          </tbody>
+        </table>
+
+        <h3>环境变量</h3>
+        <table>
+          <thead><tr><th>变量</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td><code>KESTREL_CLUSTER_ID</code></td><td>集群标识符，注入到所有归一化事件中</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-warning">
+          <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+          <div class="callout-content">
+            <h4 class="callout-title">版本注入</h4>
+            <p class="callout-body">版本信息通过 <code>ldflags</code> 在构建时注入：<code>-ldflags '-X kestrel/internal/config.Version=v1.0.0'</code></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="doc-section" id="usage" data-section="使用">
+        <h2>使用方式</h2>
+        <p>Kestrel 是管道处理器，通过 stdin 接收 JSONL 输入，stdout 输出归一化后的 <code>model.Event</code> JSONL。</p>
+
+        <h3>从文件处理</h3>
+        <div class="code-block">
+          <div class="code-header"><span class="code-header-lang">bash</span></div>
+<pre><code>cat audit.log | ./bin/kestrel -cluster-id prod-eu-west &gt; events.jsonl</code></pre>
+        </div>
+
+        <h3>实时流处理</h3>
+        <div class="code-block">
+          <div class="code-header"><span class="code-header-lang">bash</span></div>
+<pre><code>kubectl audit-stream | ./bin/kestrel -cluster-id prod-eu-west | detector</code></pre>
+        </div>
+
+        <h3>Docker 事件流</h3>
+        <div class="code-block">
+          <div class="code-header"><span class="code-header-lang">bash</span></div>
+<pre><code>docker events --format '{{json .}}' | ./bin/kestrel -cluster-id docker-host-01</code></pre>
+        </div>
+
+        <h3>Verbose 模式</h3>
+        <div class="code-block">
+          <div class="code-header"><span class="code-header-lang">bash</span></div>
+<pre><code>echo '{"auditID":"..."}' | ./bin/kestrel -cluster-id dev-cluster -v</code></pre>
+        </div>
+
+        <div class="callout callout-success">
+          <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+          <div class="callout-content">
+            <h4 class="callout-title">信号处理</h4>
+            <p class="callout-body">支持 <code>SIGINT</code>（Ctrl+C）和 <code>SIGTERM</code> 优雅关停，收到信号后停止读取新输入，输出统计后退出。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="doc-section" id="output-example" data-section="使用">
+        <h2>输出示例</h2>
+        <p>归一化后的 <code>model.Event</code> JSON 结构，包含完整的 Actor、Action、Target、Source、Metadata 字段。</p>
+
+        <div class="code-block">
+          <div class="code-header"><span class="code-header-lang">json</span></div>
+<pre><code>{
+  "id": "audit-001",
+  "timestamp": "2026-08-14T03:00:00Z",
+  "actor": {
+    "user_id": "",
+    "username": "system:anonymous",
+    "source_ip": "203.0.113.50",
+    "user_agent": "kubectl/v1.28.0",
+    "service_account": "",
+    "identity_type": "anonymous"
+  },
+  "action": {
+    "type": "container_exec",
+    "command": "/bin/sh -c cat /etc/passwd",
+    "interactive": true
+  },
+  "target": {
+    "cluster_id": "prod-eu-west",
+    "namespace": "production",
+    "pod_id": "",
+    "pod_name": "payment-svc",
+    "container_id": "",
+    "container_name": ""
+  },
+  "source": {
+    "ip": "203.0.113.50",
+    "port": 0,
+    "hostname": "",
+    "service": "kubectl/v1.28.0"
+  },
+  "metadata": {
+    "audit_id": "audit-001",
+    "audit_stage": "ResponseComplete",
+    "environment": "production",
+    "response_code": "200",
+    "source_type": "k8s_audit",
+    "subresource": "exec",
+    "verb": "create"
+  }
+}</code></pre>
+        </div>
+      </section>
+
+      <section class="doc-section" id="k8s-deploy" data-section="部署">
+        <h2>Kubernetes 部署</h2>
+        <p>通过 Kustomize 一键应用所有配置，生产环境 3 副本 + ClusterIP + TLS Ingress + NetworkPolicy。</p>
+
+        <div class="code-block">
+          <div class="code-header"><span class="code-header-lang">bash</span></div>
+<pre><code># 应用全部配置（Kustomize）
+kubectl apply -k k8s/
+
+# 或单独应用
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/rbac.yaml
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/ingress.yaml</code></pre>
+        </div>
+
+        <h3>生产环境配置特点</h3>
+        <ul>
+          <li>3 副本 RollingUpdate（maxSurge=1, maxUnavailable=0）</li>
+          <li>ClusterIP Service + TLS Ingress（速率限制 + 安全头注入）</li>
+          <li>NetworkPolicy（仅允许 ingress-nginx 和 kube-system 入站）</li>
+          <li>ClusterRole 绑定（全局审计读取权限）</li>
+          <li>资源限制: CPU 100m-500m / Memory 64Mi-256Mi</li>
+        </ul>
+
+        <h3>开发环境</h3>
+        <div class="code-block">
+          <div class="code-header"><span class="code-header-lang">bash</span></div>
+<pre><code># 开发环境使用 dev 命名空间
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/rbac.yaml
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+
+# NodePort 暴露到 30080
+minikube service kestrel-sidecar -n kestrel-dev</code></pre>
+        </div>
+      </section>
+
+      <section class="doc-section" id="security-context" data-section="部署">
+        <h2>安全配置基线</h2>
+        <p>所有环境共享的安全基线，遵循 Kubernetes 安全最佳实践。</p>
+
+        <table>
+          <thead><tr><th>配置项</th><th>值</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td><code>runAsNonRoot</code></td><td><code>true</code></td><td>禁止 root 运行</td></tr>
+            <tr><td><code>runAsUser</code></td><td><code>1000</code></td><td>非特权用户</td></tr>
+            <tr><td><code>readOnlyRootFilesystem</code></td><td><code>true</code></td><td>只读文件系统</td></tr>
+            <tr><td><code>allowPrivilegeEscalation</code></td><td><code>false</code></td><td>禁止提权</td></tr>
+            <tr><td><code>capabilities.drop</code></td><td><code>ALL</code></td><td>丢弃所有 Linux capabilities</td></tr>
+            <tr><td><code>seccompProfile</code></td><td><code>RuntimeDefault</code></td><td>默认 seccomp 配置</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="doc-section" id="telemetry-k8s" data-section="遥测">
+        <h2>遥测来源 — Kubernetes 审计日志</h2>
+        <p>从 K8s API Server 审计日志接收 <code>container/exec</code>、<code>container/attach</code>、<code>container/portforward</code> 调用。</p>
+
+        <h3>提取字段映射</h3>
+        <ul>
+          <li><code>auditID</code> → <code>Event.ID</code></li>
+          <li><code>stageTimestamp</code> → <code>Event.Timestamp</code></li>
+          <li><code>user.username</code> + groups → <code>Actor.IdentityType</code>（anonymous / service_account / node / user）</li>
+          <li><code>requestURI</code> 查询参数 → <code>Action.Command</code>（多命令拼接）</li>
+          <li><code>objectRef.subresource</code> → <code>Action.Type</code>（exec → ContainerExec）</li>
+          <li><code>sourceIPs[0]</code> → <code>Actor.SourceIP</code></li>
+          <li><code>responseStatus.code</code> → 403/401 标记为 <code>denied</code></li>
+          <li><code>objectRef.namespace</code> → <code>Target.Namespace</code> + 环境推断</li>
+        </ul>
+      </section>
+
+      <section class="doc-section" id="telemetry-docker" data-section="遥测">
+        <h2>遥测来源 — Docker Daemon 事件</h2>
+        <p>从 Docker daemon <code>/events</code> 流接收 <code>exec_create</code>、<code>exec_start</code>、<code>attach</code> 事件。</p>
+
+        <h3>提取字段映射</h3>
+        <ul>
+          <li><code>Actor.ID</code> → <code>Target.ContainerID</code></li>
+          <li><code>Actor.Attributes["name"]</code> → <code>Target.ContainerName</code></li>
+          <li><code>Actor.Attributes["image"]</code> → <code>Metadata["image"]</code></li>
+          <li><code>Time</code> / <code>TimeNano</code> → <code>Event.Timestamp</code></li>
+          <li>缺少用户身份 → 保守默认 <code>anonymous</code></li>
+        </ul>
+      </section>
+
+      <section class="doc-section" id="identity" data-section="归一化">
+        <h2>身份分类</h2>
+        <p>根据 K8s 用户名模式自动推断身份类型，影响后续检测器的告警阈值。</p>
+
+        <table>
+          <thead><tr><th>用户名模式</th><th>身份类型</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td><code>system:anonymous</code></td><td><code>anonymous</code></td><td><span class="badge badge-error">高警觉</span> 匿名访问</td></tr>
+            <tr><td><code>system:serviceaccount:{ns}:{name}</code></td><td><code>service_account</code></td><td>提取 SA 名称</td></tr>
+            <tr><td><code>system:node:{name}</code></td><td><code>node</code></td><td>节点身份</td></tr>
+            <tr><td>其他</td><td><code>user</code></td><td>普通用户</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="doc-section" id="command-extract" data-section="归一化">
+        <h2>命令提取</h2>
+        <p>K8s audit 的 <code>requestURI</code> 带有查询参数，归一化时自动 URL 解码并拼接为完整命令字符串。</p>
+
+        <div class="code-block">
+          <div class="code-header"><span class="code-header-lang">text</span></div>
+<pre><code># 原始 requestURI
+/api/v1/namespaces/default/pods/foo/exec?command=/bin/sh&amp;command=-c&amp;command=cat%20%2Fetc%2Fpasswd
+
+# 归一化后 Action.Command
+/bin/sh -c cat /etc/passwd</code></pre>
+        </div>
+      </section>
+
+      <section class="doc-section" id="denied-exec" data-section="归一化">
+        <h2>被拒绝的 exec</h2>
+        <p>403/401 响应仍然被归一化，标记 <code>metadata["denied"]=true</code>。被拒绝的执行尝试本身是有价值的检测信号。</p>
+
+        <div class="callout callout-info">
+          <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          <div class="callout-content">
+            <h4 class="callout-title">检测价值</h4>
+            <p class="callout-body">被拒绝的 exec 请求往往代表攻击者在试探边界，是 MITRE ATT&CK 检测的重要信号源。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="doc-section" id="simulate" data-section="测试">
+        <h2>一键全场景模拟 (make simulate)</h2>
+        <p><code>make simulate</code> 是最推荐的一键式测试入口，自动执行 6 个阶段并生成技术化表格报告。</p>
+
+        <div class="code-block">
+          <div class="code-header"><span class="code-header-lang">bash</span></div>
+<pre><code>make simulate         # 全自动：静态检查 + 构建 + 单元测试 + 演示 + e2e + 集成测试
+make simulate-quick   # 快速模式：跳过 Minikube 部分，3 秒跑完</code></pre>
+        </div>
+
+        <h3>6 个执行阶段</h3>
+        <table>
+          <thead><tr><th>阶段</th><th>命令</th><th>依赖</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td>1/6 静态检查</td><td><code>go vet ./...</code></td><td>无</td><td>静态分析</td></tr>
+            <tr><td>2/6 构建</td><td><code>go build -o bin/kestrel .</code></td><td>无</td><td>编译二进制</td></tr>
+            <tr><td>3/6 单元测试</td><td>4 项子测试</td><td>无</td><td>归一化器 + exec 攻击方法论</td></tr>
+            <tr><td>4/6 演示模式</td><td><code>cat demo.jsonl | ./bin/kestrel -v</code></td><td>构建产物</td><td>4 条样本归一化</td></tr>
+            <tr><td>5/6 e2e 真实测试</td><td><code>go test -tags e2e ./test/</code></td><td>Minikube + 审计日志</td><td>真实 kubectl exec 场景</td></tr>
+            <tr><td>6/6 集成安全测试</td><td><code>go test -tags integration ./test/</code></td><td>Minikube</td><td>12 类 Web 攻击模拟</td></tr>
+          </tbody>
+        </table>
+
+        <h3>输出报告示例</h3>
+        <div class="code-block">
+          <div class="code-header"><span class="code-header-lang">text</span></div>
+<pre><code>测试明细 (Test Details)
++----+--------------------------------------+--------+----------+----------+------------------------------------------+
+| #  | 测试项 (Test Name)                   | 结果   | 耗时     | 日志行数 | 说明 (Detail)                            |
++----+--------------------------------------+--------+----------+----------+------------------------------------------+
+| 1  | go vet ./...                         | [PASS] | 0s       |        0 | 耗时 0s, 日志 0 行                       |
+| 2  | go build                             | [PASS] | 0s       |        0 | 耗时 0s, 日志 0 行                       |
+| 3  | sidecar_test (12 用例)              | [PASS] | 1s       |        3 | 耗时 1s, 日志 3 行                       |
+| 4  | exec_attack (20 场景)               | [PASS] | 0s       |        1 | 耗时 0s, 日志 1 行                       |
+| 7  | demo 归一化                          | [PASS] | 0s       |        0 | 输出 4 个事件, 退出码 0                  |
++----+--------------------------------------+--------+----------+----------+------------------------------------------+
+
+统计 (Statistics)
++--------------------------+-------------------+
+| 指标 (Metric)            | 值 (Value)        |
++--------------------------+-------------------+
+| 通过率 (Pass Rate)       | 77.8%             |
+| 总耗时 (Total Duration)  | 3s                |
++--------------------------+-------------------+</code></pre>
+        </div>
+      </section>
+
+      <section class="doc-section" id="unit-tests" data-section="测试">
+        <h2>单元测试</h2>
+        <div class="code-block">
+          <div class="code-header"><span class="code-header-lang">bash</span></div>
+<pre><code>make test
+# 或
+go test ./test/ -v</code></pre>
+        </div>
+        <p>覆盖 12 个用例：匿名 exec（真阳性）、SRE 调试（假阳性）、服务账号身份、被拒绝的 exec、批量摄入、Docker exec_create、Docker attach、未知来源错误、畸形 JSON、空载荷、节点身份、多命令提取。</p>
+      </section>
+
+      <section class="doc-section" id="exec-attack" data-section="测试">
+        <h2>exec 攻击测试方法论</h2>
+        <p><code>exec_attack_test.go</code> 实现 5 层测试方法论，覆盖 20 个攻击场景。</p>
+
+        <div class="code-block">
+          <div class="code-header"><span class="code-header-lang">bash</span></div>
+<pre><code>go test ./test/ -run TestExecAttackScenarios -v      # 20 个场景
+go test ./test/ -run TestExecAttackSuccessCriteria   # 6 个质量门禁（CI 用）
+go test ./test/ -run TestExecAttackReport -v         # 汇总报告 + 缓解建议</code></pre>
+        </div>
+
+        <table>
+          <thead><tr><th>类别</th><th>场景数</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td>K8s exec 向量</td><td>12</td><td>匿名入侵、SA 滥用、反向 Shell、C2 外联、凭证窃取等</td></tr>
+            <tr><td>Docker exec 向量</td><td>3</td><td>exec_create、exec_start、attach</td></tr>
+            <tr><td>健壮性测试</td><td>5</td><td>URL 编码绕过、空命令、畸形 JSON、空载荷</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="doc-section" id="e2e" data-section="测试">
+        <h2>e2e 真实场景测试</h2>
+        <p><code>e2e_real_test.go</code> 在真实 Minikube 集群中执行真实 kubectl exec 命令，捕获审计日志并验证归一化。</p>
+
+        <div class="code-block">
+          <div class="code-header"><span class="code-header-lang">bash</span></div>
+<pre><code># 1. 准备环境（启动带审计日志的 Minikube）
+make e2e-setup
+# 或 ./scripts/e2e-setup.sh --force
+
+# 2. 运行 e2e 测试
+make e2e
+# 或 go test -tags e2e ./test/ -run TestE2ERealExec -v</code></pre>
+        </div>
+
+        <table>
+          <thead><tr><th>场景 ID</th><th>命令</th><th>严重度</th></tr></thead>
+          <tbody>
+            <tr><td>E2E-001</td><td><code>whoami</code></td><td><span class="badge badge-neutral">低</span></td></tr>
+            <tr><td>E2E-002</td><td><code>/bin/sh -c cat /etc/passwd</code></td><td><span class="badge badge-error">高</span></td></tr>
+            <tr><td>E2E-003</td><td><code>/bin/sh -c id</code></td><td><span class="badge badge-neutral">低</span></td></tr>
+            <tr><td>E2E-004</td><td><code>ls /</code></td><td><span class="badge badge-neutral">低</span></td></tr>
+            <tr><td>E2E-005</td><td><code>/bin/sh -c env</code></td><td><span class="badge badge-warning">中</span></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="doc-section" id="integration" data-section="测试">
+        <h2>集成安全测试</h2>
+        <p>集成测试使用 <code>//go:build integration</code> 构建标签，需要运行中的 Minikube 集群。</p>
+
+        <div class="code-block">
+          <div class="code-header"><span class="code-header-lang">bash</span></div>
+<pre><code># 完整安全测试套件（需要 Minikube 运行中）
+go test -tags integration ./test/ -v
+
+# 仅运行安全评估
+go test -tags integration ./test/ -run TestAttackSuite/Security_Assessment -v
+
+# 仅运行边缘场景测试
+go test -tags integration ./test/ -run "TestLargePayload|TestConcurrentRequests|TestMalformedJSON" -v
+
+# 指定应用地址（跳过 Minikube 自动发现）
+TEST_APP_URL=http://localhost:8080 go test -tags integration ./test/ -run TestSecurity -v</code></pre>
+        </div>
+
+        <h3>安全测试覆盖</h3>
+        <table>
+          <thead><tr><th>测试类别</th><th>载荷数</th><th>严重度</th><th>检测内容</th></tr></thead>
+          <tbody>
+            <tr><td>路径穿越</td><td>5</td><td><span class="badge badge-error">高</span></td><td><code>../</code> 序列、URL 编码绕过</td></tr>
+            <tr><td>命令注入</td><td>8</td><td><span class="badge badge-error">高</span></td><td>Shell 元字符、子命令注入</td></tr>
+            <tr><td>SSRF</td><td>8</td><td><span class="badge badge-error">高</span></td><td>云元数据端点、内网扫描</td></tr>
+            <tr><td>SQL 注入</td><td>6</td><td><span class="badge badge-error">高</span></td><td>布尔注入、UNION、堆叠查询</td></tr>
+            <tr><td>认证绕过</td><td>10</td><td><span class="badge badge-error">高</span></td><td>请求头伪造、路径绕过</td></tr>
+            <tr><td>跨站脚本</td><td>6</td><td><span class="badge badge-warning">中</span></td><td>反射型 XSS、事件处理器注入</td></tr>
+            <tr><td>开放重定向</td><td>5</td><td><span class="badge badge-warning">中</span></td><td>外部域名跳转、协议注入</td></tr>
+            <tr><td>目录列表</td><td>8</td><td><span class="badge badge-warning">中</span></td><td>敏感文件暴露、<code>.git</code>/<code>.env</code></td></tr>
+            <tr><td>安全响应头</td><td>6</td><td><span class="badge badge-warning">中</span></td><td>HSTS、CSP、X-Frame-Options</td></tr>
+            <tr><td>HTTP 方法篡改</td><td>9</td><td><span class="badge badge-info">低</span></td><td>TRACE/PROPFIND/CONNECT</td></tr>
+            <tr><td>HTTP 参数污染</td><td>4</td><td><span class="badge badge-info">低</span></td><td>重复参数绕过</td></tr>
+            <tr><td>Host 头注入</td><td>4</td><td><span class="badge badge-info">低</span></td><td>恶意 Host 反射</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="doc-section" id="principles" data-section="设计">
+        <h2>设计原则</h2>
+        <ol>
+          <li><strong>归一化 ≠ 检测</strong> — Sidecar 只负责把原始遥测变成干净的 <code>model.Event</code>，不生成信号或告警</li>
+          <li><strong>Denied exec 仍记录</strong> — 被拒绝的尝试是宝贵的检测信号</li>
+          <li><strong>Docker 缺身份 → 保守匿名</strong> — 让检测器以更高警觉评估</li>
+          <li><strong>零外部依赖</strong> — 仅用 Go 标准库</li>
+          <li><strong>管道模式</strong> — stdin/stdout JSONL，适合 Kubernetes sidecar 部署</li>
+          <li><strong>优雅关停</strong> — SIGINT/SIGTERM 信号响应，不丢正在处理的事件</li>
+        </ol>
+      </section>
+
+      <section class="doc-section" id="mitre" data-section="设计">
+        <h2>MITRE ATT&CK 映射</h2>
+        <p>Kestrel 针对 MITRE ATT&CK <strong>T1059.013 — Container CLI/API</strong> 检测场景设计。</p>
+
+        <table>
+          <thead><tr><th>字段</th><th>值</th></tr></thead>
+          <tbody>
+            <tr><td>Technique</td><td><code>T1059.013</code> — Container CLI/API</td></tr>
+            <tr><td>Detection Strategy</td><td><code>DET0083</code></td></tr>
+            <tr><td>Analytic</td><td><code>AN0233</code></td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-info">
+          <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6M10 14L21 3"/></svg>
+          <div class="callout-content">
+            <h4 class="callout-title">参考资源</h4>
+            <p class="callout-body"><a href="https://attack.mitre.org/detectionstrategies/DET0083/" target="_blank" rel="noopener">MITRE ATT&CK DET0083 检测策略</a></p>
+          </div>
+        </div>
+      </section>
+
+      <hr>
+
+      <footer style="text-align:center; padding: var(--space-8) 0; color: var(--color-fg-subtle); font-size: 0.875rem;">
+        <p>Kestrel — 容器安全遥测归一化引擎</p>
+        <p>针对 MITRE ATT&CK T1059.013 检测场景</p>
+      </footer>
+    </main>
+
+    <!-- ─── TOC (right rail, desktop only) ─── -->
+    <aside class="toc" data-toc aria-label="本页目录">
+      <h3 class="toc-title">本页目录</h3>
+      <div class="toc-list"></div>
+    </aside>
+  </div>
+
+  <!-- ═══ Search Modal ═══ -->
+  <div class="search-modal" id="search-modal" role="dialog" aria-modal="true" aria-label="搜索文档">
+    <div class="search-dialog" role="document">
+      <div class="search-input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" class="search-input" placeholder="搜索文档..." aria-label="搜索输入" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="search-results" role="listbox"></div>
+      <div class="search-footer">
+        <span><span class="search-footer-count">0</span> 个结果</span>
+        <span><kbd>↑</kbd> <kbd>↓</kbd> 导航 · <kbd>ESC</kbd> 关闭</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Scroll to top ═══ -->
+  <button class="scroll-top icon-button" aria-label="回到顶部" style="position: fixed; bottom: var(--space-6); right: var(--space-6); z-index: var(--z-sticky); opacity: 0; visibility: hidden; transition: all 150ms; box-shadow: var(--shadow-md); background: var(--color-bg-elevated); border: 1px solid var(--color-border);">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M18 15l-6-6-6 6"/></svg>
+  </button>
+
+  <style>
+    .scroll-top.visible { opacity: 1; visibility: visible; }
+    .scroll-top:hover { background: var(--color-bg-muted); transform: translateY(-2px); }
+  </style>
+
+  <script src="js/main.js" defer></script>
+</body>
+</html>
