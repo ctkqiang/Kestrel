@@ -328,6 +328,59 @@ K8s audit 的 `requestURI` 带有查询参数：
 
 ## 测试
 
+### 一键全场景模拟 (make simulate)
+
+`make simulate` 是最推荐的一键式测试入口，自动执行 6 个阶段并生成技术化表格报告：
+
+```bash
+make simulate         # 全自动：静态检查 + 构建 + 单元测试 + 演示 + e2e + 集成测试
+make simulate-quick   # 快速模式：跳过 Minikube 部分，3 秒跑完
+```
+
+**6 个执行阶段：**
+
+| 阶段 | 命令 | 依赖 | 说明 |
+|---|---|---|---|
+| 1/6 静态检查 | `go vet ./...` | 无 | 静态分析 |
+| 2/6 构建 | `go build -o bin/kestrel .` | 无 | 编译二进制 |
+| 3/6 单元测试 | 4 项子测试 | 无 | 归一化器 + exec 攻击方法论 |
+| 4/6 演示模式 | `cat demo.jsonl \| ./bin/kestrel -v` | 构建产物 | 4 条样本归一化 |
+| 5/6 e2e 真实测试 | `go test -tags e2e ./test/` | Minikube + 审计日志 | 真实 kubectl exec 场景 |
+| 6/6 集成安全测试 | `go test -tags integration ./test/` | Minikube | 12 类 Web 攻击模拟 |
+
+**输出报告示例：**
+
+```
+测试明细 (Test Details)
++----+--------------------------------------+--------+----------+----------+------------------------------------------+
+| #  | 测试项 (Test Name)                   | 结果   | 耗时     | 日志行数 | 说明 (Detail)                            |
++----+--------------------------------------+--------+----------+----------+------------------------------------------+
+| 1  | go vet ./...                         | [PASS] | 0s       |        0 | 耗时 0s, 日志 0 行                       |
+| 2  | go build                             | [PASS] | 0s       |        0 | 耗时 0s, 日志 0 行                       |
+| 3  | sidecar_test (12 用例)              | [PASS] | 1s       |        3 | 耗时 1s, 日志 3 行                       |
+| 4  | exec_attack (20 场景)               | [PASS] | 0s       |        1 | 耗时 0s, 日志 1 行                       |
+| 5  | quality_gates (6 门禁)              | [PASS] | 0s       |        8 | 耗时 0s, 日志 8 行                       |
+| 6  | attack_report                        | [PASS] | 1s       |        1 | 耗时 1s, 日志 1 行                       |
+| 7  | demo 归一化                          | [PASS] | 0s       |        0 | 输出 4 个事件, 退出码 0                  |
+| 8  | e2e 真实测试                         | [SKIP] | 0s       |        0 | Minikube 未运行                         |
+| 9  | 集成安全测试                          | [SKIP] | 0s       |        0 | Minikube 未运行                         |
++----+--------------------------------------+--------+----------+----------+------------------------------------------+
+
+统计 (Statistics)
++--------------------------+-------------------+
+| 指标 (Metric)            | 值 (Value)        |
++--------------------------+-------------------+
+| 总测试项 (Total)         | 9                 |
+| 通过 (Passed)            | 7                 |
+| 失败 (Failed)            | 0                 |
+| 跳过 (Skipped)           | 2                 |
+| 通过率 (Pass Rate)       | 77.8%             |
+| 总耗时 (Total Duration)  | 3s                |
++--------------------------+-------------------+
+```
+
+每项测试的详细日志保存在 `/tmp/kestrel-simulate-*.log`，失败时自动显示前 30 行 + 后 30 行。
+
 ### 单元测试
 
 ```bash
@@ -337,6 +390,46 @@ go test ./test/ -v
 ```
 
 覆盖 12 个用例：匿名 exec（真阳性）、SRE 调试（假阳性）、服务账号身份、被拒绝的 exec、批量摄入、Docker exec_create、Docker attach、未知来源错误、畸形 JSON、空载荷、节点身份、多命令提取。
+
+### exec 攻击测试方法论
+
+`exec_attack_test.go` 实现 5 层测试方法论，覆盖 20 个攻击场景：
+
+```bash
+go test ./test/ -run TestExecAttackScenarios -v      # 20 个场景
+go test ./test/ -run TestExecAttackSuccessCriteria   # 6 个质量门禁（CI 用）
+go test ./test/ -run TestExecAttackReport -v         # 汇总报告 + 缓解建议
+```
+
+| 类别 | 场景数 | 说明 |
+|---|---|---|
+| K8s exec 向量 | 12 | 匿名入侵、SA 滥用、反向 Shell、C2 外联、凭证窃取等 |
+| Docker exec 向量 | 3 | exec_create、exec_start、attach |
+| 健壮性测试 | 5 | URL 编码绕过、空命令、畸形 JSON、空载荷 |
+
+### e2e 真实场景测试
+
+`e2e_real_test.go` 在真实 Minikube 集群中执行真实 kubectl exec 命令，捕获审计日志并验证归一化：
+
+```bash
+# 1. 准备环境（启动带审计日志的 Minikube）
+make e2e-setup
+# 或 ./scripts/e2e-setup.sh --force
+
+# 2. 运行 e2e 测试
+make e2e
+# 或 go test -tags e2e ./test/ -run TestE2ERealExec -v
+```
+
+5 个真实攻击场景：
+
+| 场景 ID | 命令 | 严重度 |
+|---|---|---|
+| E2E-001 | `whoami` | 低 |
+| E2E-002 | `/bin/sh -c cat /etc/passwd` | 高 |
+| E2E-003 | `/bin/sh -c id` | 低 |
+| E2E-004 | `ls /` | 低 |
+| E2E-005 | `/bin/sh -c env` | 中 |
 
 ### 集成安全测试
 
