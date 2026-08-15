@@ -1,4 +1,4 @@
-.PHONY: build test vet lint run clean demo help
+.PHONY: build test vet lint run clean demo e2e e2e-setup simulate help
 
 VERSION  := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 LDFLAGS  := -X kestrel/internal/config.Version=$(VERSION)
@@ -38,6 +38,22 @@ demo:
 ## clean: 清理构建产物
 clean:
 	rm -rf bin/
+
+## e2e-setup: 启动带审计日志的 Minikube 集群
+e2e-setup:
+	./scripts/e2e-setup.sh
+
+## e2e: 运行端到端真实场景测试（需先 e2e-setup）
+e2e:
+	./scripts/e2e-real.sh
+
+## simulate: 全场景自动化模拟（静态检查+构建+单元测试+演示+e2e+集成测试）
+simulate:
+	./scripts/simulate.sh
+
+## simulate-quick: 仅本地测试（跳过 e2e，无需 Minikube）
+simulate-quick:
+	./scripts/simulate.sh --skip-e2e
 
 ## help: 显示所有可用目标
 help:

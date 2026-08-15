@@ -231,10 +231,25 @@ func requireAuditLogAvailable(t *testing.T) {
 func deployE2ETargetPod(t *testing.T) {
 	t.Helper()
 
-	// 创建命名空间。
-	runKubectl(t, "create", "namespace", e2eNamespace, "--dry-run=client", "-o", "yaml")
-	runKubectl(t, "apply", "-f", "-", "--namespace", e2eNamespace,
-		strings.NewReader(fmt.Sprintf(`apiVersion: v1
+	// 用 apply 创建命名空间（已存在不会报错，kubectl create 不支持 --ignore-not-found）。
+	runKubectlWithStdin(t, fmt.Sprintf(`apiVersion: v1
+kind: Namespace
+metadata:
+  name: %s
+`, e2eNamespace), "apply", "-f", "-")
+
+	// 等待命名空间真正可用。
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		out := runKubectlSilent(t, "get", "namespace", e2eNamespace, "-o", "name")
+		if strings.TrimSpace(out) != "" {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	// 部署测试目标 Pod。
+	runKubectlWithStdin(t, fmt.Sprintf(`apiVersion: v1
 kind: Pod
 metadata:
   name: %s
@@ -247,7 +262,7 @@ spec:
   - name: target
     image: %s
     command: ["sleep", "3600"]
-`, e2ePodName, e2eNamespace, e2eContainerImage)))
+`, e2ePodName, e2eNamespace, e2eContainerImage), "apply", "-f", "-")
 }
 
 // waitForPodReady 等待测试目标 Pod 进入 Running 状态。
@@ -326,12 +341,17 @@ func runRealKubectlExec(t *testing.T, sc e2eExecScenario) {
 func buildKestrel(t *testing.T, outputPath string) {
 	t.Helper()
 
-	projectRoot, err := os.Getwd()
+	// go test ./test/ 时工作目录是项目根下的 test/，上一级即为项目根。
+	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("获取工作目录失败: %v", err)
 	}
-	// 回退到项目根目录（test/ 的上一级）。
-	projectRoot = filepath.Dir(filepath.Dir(projectRoot))
+	projectRoot := filepath.Dir(wd)
+
+	// 校验项目根目录确实包含 go.mod。
+	if _, err := os.Stat(filepath.Join(projectRoot, "go.mod")); err != nil {
+		t.Fatalf("未在 %s 找到 go.mod，无法构建 Kestrel", projectRoot)
+	}
 
 	cmd := exec.Command("go", "build", "-o", outputPath, ".")
 	cmd.Dir = projectRoot
@@ -339,7 +359,7 @@ func buildKestrel(t *testing.T, outputPath string) {
 	if err != nil {
 		t.Fatalf("构建 Kestrel 失败:\n%s\n%v", output, err)
 	}
-	t.Logf("Kestrel 已构建: %s", outputPath)
+	t.Logf("Kestrel 已构建: %s (项目根: %s)", outputPath, projectRoot)
 }
 
 // runKestrel 将审计日志 pipe 给 Kestrel 二进制，返回其 stdout 输出。
@@ -514,22 +534,23 @@ func cleanupE2E(t *testing.T) {
 // ─── kubectl 辅助函数 ──────────────────────────────────────
 
 // runKubectl 执行 kubectl 命令，失败时 t.Fatal。
-// 可选的最后一个参数为 stdin reader。
 func runKubectl(t *testing.T, args ...string) {
 	t.Helper()
 
-	var stdin *strings.Reader
-	if len(args) > 0 {
-		if r, ok := args[len(args)-1].(*strings.Reader); ok {
-			stdin = r
-			args = args[:len(args)-1]
-		}
+	cmd := exec.Command("kubectl", args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("kubectl %s 失败:\n%s\n%v", strings.Join(args, " "), output, err)
 	}
+	t.Logf("kubectl %s: %s", strings.Join(args, " "), strings.TrimSpace(string(output)))
+}
+
+// runKubectlWithStdin 执行 kubectl 命令（带 stdin 输入），失败时 t.Fatal。
+func runKubectlWithStdin(t *testing.T, stdin string, args ...string) {
+	t.Helper()
 
 	cmd := exec.Command("kubectl", args...)
-	if stdin != nil {
-		cmd.Stdin = stdin
-	}
+	cmd.Stdin = strings.NewReader(stdin)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("kubectl %s 失败:\n%s\n%v", strings.Join(args, " "), output, err)
